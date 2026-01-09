@@ -18,14 +18,7 @@ export default function Home() {
           Check In Sekarang →
         </Link>
 
-        <div className="mt-12">
-          <Link
-            href="/login"
-            className="text-white hover:text-blue-200 text-sm underline"
-          >
-            Admin Login
-          </Link>
-        </div>
+
       </div>
     </div>
   )

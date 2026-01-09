@@ -225,14 +225,7 @@ export default function CheckInPage() {
                     </>
                 )}
 
-                <div className="mt-8 text-center">
-                    <a
-                        href="/login"
-                        className="text-sm text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
-                    >
-                        Admin Login
-                    </a>
-                </div>
+
             </div>
         </div>
     )

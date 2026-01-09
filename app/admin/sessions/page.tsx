@@ -6,6 +6,11 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 
+import Swal from 'sweetalert2'
+import withReactContent from 'sweetalert2-react-content'
+
+const MySwal = withReactContent(Swal)
+
 export default function SessionsPage() {
     const [sessions, setSessions] = useState<any[]>([])
     const [activeSession, setActiveSession] = useState<any>(null)
@@ -39,6 +44,7 @@ export default function SessionsPage() {
             setActiveSession(activeData.sessions?.[0] || null)
         } catch (error) {
             console.error('Failed to fetch sessions:', error)
+            MySwal.fire('Error', 'Gagal memuat sesi', 'error')
         } finally {
             setLoading(false)
         }
@@ -46,7 +52,7 @@ export default function SessionsPage() {
 
     const openSession = async () => {
         if (!formData.sessionName) {
-            alert('Nama sesi harus diisi')
+            MySwal.fire('Gagal', 'Nama sesi harus diisi', 'warning')
             return
         }
 
@@ -61,21 +67,38 @@ export default function SessionsPage() {
             const data = await res.json()
 
             if (res.ok) {
-                alert('Sesi berhasil dibuka!')
+                MySwal.fire({
+                    title: 'Berhasil!',
+                    text: 'Sesi berhasil dibuka!',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                })
                 setShowModal(false)
                 fetchSessions()
             } else {
-                alert(data.error || 'Gagal membuka sesi')
+                MySwal.fire('Gagal', data.error || 'Gagal membuka sesi', 'error')
             }
         } catch (error) {
-            alert('Terjadi kesalahan')
+            MySwal.fire('Error', 'Terjadi kesalahan sistem', 'error')
         } finally {
             setLoading(false)
         }
     }
 
     const closeSession = async (sessionId: string) => {
-        if (!confirm('Tutup sesi ini? Karyawan tidak akan bisa check-in lagi.')) return
+        const result = await MySwal.fire({
+            title: 'Tutup Sesi?',
+            text: "Karyawan tidak akan bisa check-in lagi setelah sesi ditutup.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, Tutup Sesi!',
+            cancelButtonText: 'Batal'
+        })
+
+        if (!result.isConfirmed) return
 
         setLoading(true)
         try {
@@ -86,13 +109,13 @@ export default function SessionsPage() {
             })
 
             if (res.ok) {
-                alert('Sesi berhasil ditutup')
+                MySwal.fire('Berhasil!', 'Sesi berhasil ditutup', 'success')
                 fetchSessions()
             } else {
-                alert('Gagal menutup sesi')
+                MySwal.fire('Gagal', 'Gagal menutup sesi', 'error')
             }
         } catch (error) {
-            alert('Terjadi kesalahan')
+            MySwal.fire('Error', 'Terjadi kesalahan sistem', 'error')
         } finally {
             setLoading(false)
         }
@@ -178,8 +201,8 @@ export default function SessionsPage() {
                                         </div>
                                         <span
                                             className={`px-3 py-1 rounded-full text-xs font-semibold ${session.status === 'open'
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : 'bg-gray-100 text-gray-800'
+                                                ? 'bg-green-100 text-green-800'
+                                                : 'bg-gray-100 text-gray-800'
                                                 }`}
                                         >
                                             {session.status === 'open' ? 'Aktif' : 'Ditutup'}
