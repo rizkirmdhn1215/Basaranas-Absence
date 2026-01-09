@@ -114,7 +114,31 @@ function CheckInContent() {
         setSuggestions([])
     }
 
+    if (!urlToken || !urlSessionId) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+                    <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">
+                        Akses Ditolak
+                    </h2>
+                    <p className="text-gray-600 mb-6">
+                        Silakan scan QR Code yang ada di layar Admin Dashboard untuk melakukan absensi.
+                    </p>
+                    <a href="/" className="text-indigo-600 hover:text-indigo-700 font-semibold">
+                        Kembali ke Beranda
+                    </a>
+                </div>
+            </div>
+        )
+    }
+
     if (success) {
+        // ... (keep this block)
         return (
             <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">

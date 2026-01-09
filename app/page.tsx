@@ -1,4 +1,4 @@
-import Link from 'next/link'
+
 
 export default function Home() {
   return (
@@ -11,12 +11,14 @@ export default function Home() {
           Sistem Absensi Digital
         </p>
 
-        <Link
-          href="/checkin"
-          className="inline-block bg-white hover:bg-gray-100 text-indigo-600 font-bold text-2xl px-12 py-6 rounded-2xl shadow-2xl hover:shadow-3xl transition-all transform hover:scale-105"
-        >
-          Check In Sekarang →
-        </Link>
+        <div className="bg-white/20 backdrop-blur-lg rounded-2xl p-8 text-white max-w-md mx-auto shadow-xl border border-white/30">
+          <p className="text-xl font-medium mb-4">
+            👋 Selamat Datang
+          </p>
+          <p className="text-lg opacity-90">
+            Silakan scan <strong>QR Code</strong> yang ditampilkan di layar monitor/admin untuk melakukan absensi.
+          </p>
+        </div>
 
 
       </div>
