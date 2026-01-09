@@ -2,10 +2,10 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 
-export default function CheckInPage() {
+function CheckInContent() {
     const searchParams = useSearchParams()
     const urlSessionId = searchParams.get('session')
     const urlToken = searchParams.get('token')
@@ -234,5 +234,13 @@ export default function CheckInPage() {
 
             </div>
         </div>
+    )
+}
+
+export default function CheckInPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50">Memuat...</div>}>
+            <CheckInContent />
+        </Suspense>
     )
 }
