@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import QRPanel from '@/components/QRPanel'
 
 export default async function DashboardPage() {
     const supabase = await createClient()
@@ -70,22 +71,13 @@ export default async function DashboardPage() {
                     </p>
                 </div>
 
+
                 {/* Active Session Alert */}
-                {activeSession && (
-                    <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-500 rounded-xl p-6 mb-8">
-                        <div className="flex items-center gap-3">
-                            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                            <div>
-                                <p className="font-semibold text-green-900 dark:text-green-100">
-                                    Sesi Aktif: {activeSession.session_name}
-                                </p>
-                                <p className="text-sm text-green-700 dark:text-green-300">
-                                    {activeSession.start_time} - {activeSession.end_time}
-                                </p>
-                            </div>
-                        </div>
+                {activeSession ? (
+                    <div className="mb-8">
+                        <QRPanel sessionId={activeSession.id} sessionName={activeSession.session_name} />
                     </div>
-                )}
+                ) : null}
 
                 {/* Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

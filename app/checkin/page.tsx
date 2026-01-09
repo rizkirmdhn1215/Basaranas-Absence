@@ -3,8 +3,13 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 
 export default function CheckInPage() {
+    const searchParams = useSearchParams()
+    const urlSessionId = searchParams.get('session')
+    const urlToken = searchParams.get('token')
+
     const [activeSession, setActiveSession] = useState<any>(null)
     const [employeeName, setEmployeeName] = useState('')
     const [suggestions, setSuggestions] = useState<any[]>([])
@@ -81,7 +86,8 @@ export default function CheckInPage() {
                 body: JSON.stringify({
                     employeeName: employeeName.trim(),
                     sessionId: activeSession.id,
-                    deviceId: deviceId
+                    deviceId: deviceId,
+                    token: urlToken // Include token from URL check
                 }),
             })
 
