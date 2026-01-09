@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 export default function CheckInPage() {
     const [activeSession, setActiveSession] = useState<any>(null)
@@ -13,6 +13,7 @@ export default function CheckInPage() {
     const [error, setError] = useState('')
     const [employeeData, setEmployeeData] = useState<any>(null)
     const [deviceId, setDeviceId] = useState('')
+    const isSelecting = useRef(false)
 
     useEffect(() => {
         fetchActiveSession()
@@ -27,6 +28,11 @@ export default function CheckInPage() {
     }, [])
 
     useEffect(() => {
+        if (isSelecting.current) {
+            isSelecting.current = false
+            return
+        }
+
         if (employeeName.length >= 2) {
             fetchSuggestions()
         } else {
@@ -97,6 +103,7 @@ export default function CheckInPage() {
     }
 
     const selectSuggestion = (name: string) => {
+        isSelecting.current = true
         setEmployeeName(name)
         setSuggestions([])
     }

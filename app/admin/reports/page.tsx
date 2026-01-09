@@ -2,11 +2,11 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import * as XLSX from 'xlsx'
 
-export default function ReportsPage() {
+function ReportsContent() {
     const [sessions, setSessions] = useState<any[]>([])
     const [selectedSession, setSelectedSession] = useState<string>('')
     const [reportData, setReportData] = useState<any>(null)
@@ -231,5 +231,13 @@ export default function ReportsPage() {
                 )}
             </main>
         </div>
+    )
+}
+
+export default function ReportsPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center">Memuat...</div>}>
+            <ReportsContent />
+        </Suspense>
     )
 }
