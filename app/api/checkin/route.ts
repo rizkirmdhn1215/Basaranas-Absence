@@ -28,7 +28,7 @@ export async function POST(request: Request) {
         const { data: employees, error: empError } = await supabase
             .from('employees')
             .select('*')
-            .or(`name.ilike.${employeeName},nip.ilike.${employeeName}`)
+            .or(`name.ilike.%${employeeName}%,nip.ilike.%${employeeName}%`)
             .eq('is_active', true)
 
         if (empError) {
