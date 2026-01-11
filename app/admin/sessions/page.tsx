@@ -217,7 +217,7 @@ export default function SessionsPage() {
 
             {/* Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="fixed inset-0 bg-white/30 dark:bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6">
                         <h3 className="text-xl font-bold mb-4">Buka Sesi Baru</h3>
                         <div className="space-y-4">

@@ -58,18 +58,138 @@ function ReportsContent() {
     const exportToExcel = () => {
         if (!reportData) return
 
-        const dataToExport = reportData.attendance
-            .filter((a: any) => tab === 'present' ? a.status === 'present' : a.status === 'absent')
-            .map((a: any) => ({
-                Nama: a.employee.name,
-                'Pangkat/Gol': a.employee.rank,
-                Jabatan: a.employee.position,
-                Status: a.status === 'present' ? 'Hadir' : 'Tidak Hadir',
-                'Waktu Check-In': a.checked_in_at || '-',
-            }))
-
-        const ws = XLSX.utils.json_to_sheet(dataToExport)
         const wb = XLSX.utils.book_new()
+        const ws = XLSX.utils.aoa_to_sheet([]) // Create empty sheet
+
+        // Get session info
+        const sessionName = reportData.session.session_name
+        const sessionDate = new Date(reportData.session.session_date).toLocaleDateString('id-ID', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        })
+        const sessionTime = `${reportData.session.start_time} - ${reportData.session.end_time}`
+
+        // Add header rows (rows 1-5) - will be merged later
+        XLSX.utils.sheet_add_aoa(ws, [
+            ['DAFTAR ABSENSI'],
+            ['Kantor Pencarian dan Pertolongan Kelas A Padang'],
+            ['Badan Nasional Pencarian dan Pertolongan'],
+            [`Periode ${sessionDate}`],
+            [`${sessionName} (${sessionTime})`]
+        ], { origin: 'A1' })
+
+        // Add table headers at row 6
+        const headers = ['No', 'NIP', 'Nama', 'Pangkat/Gol', 'Jabatan', 'Waktu Check-In', 'Keterangan']
+        XLSX.utils.sheet_add_aoa(ws, [headers], { origin: 'A6' })
+
+        // Prepare data
+        const dataRows = reportData.attendance
+            .filter((a: any) => tab === 'present' ? a.status === 'present' : a.status === 'absent')
+            .map((a: any, idx: number) => [
+                idx + 1,
+                a.employee.nip || '-',
+                a.employee.name,
+                a.employee.rank || '-',
+                a.employee.position || '-',
+                a.checked_in_at ? new Date(a.checked_in_at).toLocaleTimeString('id-ID') : '-',
+                '' // Empty Keterangan column
+            ])
+
+        // Add data starting from row 7
+        XLSX.utils.sheet_add_aoa(ws, dataRows, { origin: 'A7' })
+
+        // Set column widths
+        ws['!cols'] = [
+            { wch: 5 },  // No
+            { wch: 18 }, // NIP
+            { wch: 25 }, // Nama
+            { wch: 15 }, // Pangkat/Gol
+            { wch: 30 }, // Jabatan
+            { wch: 15 }, // Waktu Check-In
+            { wch: 30 }  // Keterangan
+        ]
+
+        // Set row heights for header rows (1-5) to prevent text clipping
+        ws['!rows'] = [
+            { hpt: 20 }, // Row 1
+            { hpt: 18 }, // Row 2
+            { hpt: 18 }, // Row 3
+            { hpt: 18 }, // Row 4
+            { hpt: 18 }, // Row 5
+            { hpt: 20 }  // Row 6 (table header)
+        ]
+
+        // Merge cells for header rows (A1:G1, A2:G2, etc.)
+        ws['!merges'] = [
+            { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }, // Row 1
+            { s: { r: 1, c: 0 }, e: { r: 1, c: 6 } }, // Row 2
+            { s: { r: 2, c: 0 }, e: { r: 2, c: 6 } }, // Row 3
+            { s: { r: 3, c: 0 }, e: { r: 3, c: 6 } }, // Row 4
+            { s: { r: 4, c: 0 }, e: { r: 4, c: 6 } }  // Row 5
+        ]
+
+        // Apply styles to header rows (1-5) - centered, middle aligned, and bold
+        for (let row = 1; row <= 5; row++) {
+            const cellRef = XLSX.utils.encode_cell({ r: row - 1, c: 0 })
+            if (!ws[cellRef]) continue
+            ws[cellRef].s = {
+                alignment: {
+                    horizontal: 'center',
+                    vertical: 'center',
+                    wrapText: true
+                },
+                font: { bold: true, sz: row === 1 ? 14 : 11 }
+            }
+        }
+
+        // Apply styles to table headers (row 6) - bold, centered, with background
+        for (let col = 0; col < headers.length; col++) {
+            const cellRef = XLSX.utils.encode_cell({ r: 5, c: col })
+            if (!ws[cellRef]) continue
+            ws[cellRef].s = {
+                alignment: {
+                    horizontal: 'center',
+                    vertical: 'center',
+                    wrapText: true
+                },
+                font: { bold: true },
+                fill: { fgColor: { rgb: 'D3D3D3' } },
+                border: {
+                    top: { style: 'medium', color: { rgb: '000000' } },
+                    bottom: { style: 'thin', color: { rgb: '000000' } },
+                    left: col === 0 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } },
+                    right: col === headers.length - 1 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } }
+                }
+            }
+        }
+
+        // Apply borders to data cells with thick outer border
+        for (let row = 0; row < dataRows.length; row++) {
+            const isLastRow = row === dataRows.length - 1
+            for (let col = 0; col < headers.length; col++) {
+                const cellRef = XLSX.utils.encode_cell({ r: 6 + row, c: col })
+                if (!ws[cellRef]) ws[cellRef] = { v: '', t: 's' }
+
+                const isFirstCol = col === 0
+                const isLastCol = col === headers.length - 1
+
+                ws[cellRef].s = {
+                    border: {
+                        top: { style: 'thin', color: { rgb: '000000' } },
+                        bottom: isLastRow ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } },
+                        left: isFirstCol ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } },
+                        right: isLastCol ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } }
+                    },
+                    alignment: {
+                        horizontal: col === 0 ? 'center' : 'left',
+                        vertical: 'center',
+                        wrapText: true
+                    }
+                }
+            }
+        }
+
         XLSX.utils.book_append_sheet(wb, ws, tab === 'present' ? 'Hadir' : 'Tidak Hadir')
 
         const filename = `Absensi_${reportData.session.session_name}_${tab === 'present' ? 'Hadir' : 'Tidak_Hadir'}.xlsx`
