@@ -1,10 +1,10 @@
-import { createClient } from '@/utils/supabase/server'
+import { createAnonClient } from '@/utils/supabase/anon'
 import { NextResponse } from 'next/server'
 import { validateQRToken } from '@/lib/qr-token'
 
 export async function POST(request: Request) {
     try {
-        const supabase = await createClient()
+        const supabase = createAnonClient()
         const body = await request.json()
         const { employeeName, sessionId, deviceId, token } = body
 
@@ -24,11 +24,11 @@ export async function POST(request: Request) {
             )
         }
 
-        // Find employee by name (case-insensitive)
+        // Find employee by name OR NIP (case-insensitive)
         const { data: employees, error: empError } = await supabase
             .from('employees')
             .select('*')
-            .ilike('name', employeeName)
+            .or(`name.ilike.${employeeName},nip.ilike.${employeeName}`)
             .eq('is_active', true)
 
         if (empError) {
@@ -173,7 +173,7 @@ export async function POST(request: Request) {
 // GET: Search employees by name (for autocomplete)
 export async function GET(request: Request) {
     try {
-        const supabase = await createClient()
+        const supabase = createAnonClient()
         const { searchParams } = new URL(request.url)
         const query = searchParams.get('q')
 
@@ -183,8 +183,8 @@ export async function GET(request: Request) {
 
         const { data, error } = await supabase
             .from('employees')
-            .select('name, position, rank')
-            .ilike('name', `%${query}%`)
+            .select('nip, name, position, rank')
+            .or(`name.ilike.%${query}%,nip.ilike.%${query}%`)
             .eq('is_active', true)
             .limit(10)
 
