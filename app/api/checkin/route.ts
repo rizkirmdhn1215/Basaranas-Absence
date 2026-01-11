@@ -25,11 +25,24 @@ export async function POST(request: Request) {
         }
 
         // Find employee by name OR NIP (case-insensitive)
-        const { data: employees, error: empError } = await supabase
+        // Try searching by name first
+        let { data: employees, error: empError } = await supabase
             .from('employees')
             .select('*')
-            .or(`name.ilike.%${employeeName}%,nip.ilike.%${employeeName}%`)
+            .ilike('name', `%${employeeName}%`)
             .eq('is_active', true)
+
+        // If no results, try searching by NIP
+        if ((!employees || employees.length === 0) && !empError) {
+            const nipResult = await supabase
+                .from('employees')
+                .select('*')
+                .ilike('nip', `%${employeeName}%`)
+                .eq('is_active', true)
+
+            employees = nipResult.data
+            empError = nipResult.error
+        }
 
         if (empError) {
             return NextResponse.json({ error: empError.message }, { status: 500 })
@@ -181,12 +194,26 @@ export async function GET(request: Request) {
             return NextResponse.json({ employees: [] })
         }
 
-        const { data, error } = await supabase
+        // Search by name first
+        let { data, error } = await supabase
             .from('employees')
             .select('nip, name, position, rank')
-            .or(`name.ilike.%${query}%,nip.ilike.%${query}%`)
+            .ilike('name', `%${query}%`)
             .eq('is_active', true)
             .limit(10)
+
+        // If no results, try searching by NIP
+        if ((!data || data.length === 0) && !error) {
+            const nipResult = await supabase
+                .from('employees')
+                .select('nip, name, position, rank')
+                .ilike('nip', `%${query}%`)
+                .eq('is_active', true)
+                .limit(10)
+
+            data = nipResult.data
+            error = nipResult.error
+        }
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 })
