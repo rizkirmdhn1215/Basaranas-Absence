@@ -317,6 +317,7 @@ export default function EmployeesPage() {
                                 <table className="w-full text-sm">
                                     <thead className="bg-gray-100 dark:bg-gray-700">
                                         <tr>
+                                            <th className="px-4 py-2 text-left">NIP</th>
                                             <th className="px-4 py-2 text-left">Nama</th>
                                             <th className="px-4 py-2 text-left">Pangkat/Gol</th>
                                             <th className="px-4 py-2 text-left">Jabatan</th>
@@ -325,6 +326,7 @@ export default function EmployeesPage() {
                                     <tbody>
                                         {previewData.slice(0, 50).map((emp, idx) => (
                                             <tr key={idx} className="border-b">
+                                                <td className="px-4 py-2">{emp.nip}</td>
                                                 <td className="px-4 py-2">{emp.name}</td>
                                                 <td className="px-4 py-2">{emp.rank}</td>
                                                 <td className="px-4 py-2">{emp.position}</td>
@@ -358,6 +360,15 @@ export default function EmployeesPage() {
                         <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6">
                             <h3 className="text-xl font-bold mb-4">Edit Karyawan</h3>
                             <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">NIP</label>
+                                    <input
+                                        type="text"
+                                        value={editingEmployee.nip || ''}
+                                        onChange={(e) => setEditingEmployee({ ...editingEmployee, nip: e.target.value })}
+                                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700"
+                                    />
+                                </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Nama</label>
                                     <input
@@ -472,9 +483,10 @@ export default function EmployeesPage() {
                                                     />
                                                 </th>
                                                 <th className="px-4 py-3 w-12 text-center text-sm font-semibold border-b dark:border-gray-600">No</th>
-                                                <th className="px-4 py-3 w-[25%] text-sm font-semibold border-b dark:border-gray-600 truncate">Nama</th>
-                                                <th className="px-4 py-3 w-[20%] text-sm font-semibold border-b dark:border-gray-600 truncate">Pangkat/Gol</th>
-                                                <th className="px-4 py-3 w-[30%] text-sm font-semibold border-b dark:border-gray-600 truncate">Jabatan</th>
+                                                <th className="px-4 py-3 w-[15%] text-sm font-semibold border-b dark:border-gray-600 truncate">NIP</th>
+                                                <th className="px-4 py-3 w-[20%] text-sm font-semibold border-b dark:border-gray-600 truncate">Nama</th>
+                                                <th className="px-4 py-3 w-[15%] text-sm font-semibold border-b dark:border-gray-600 truncate">Pangkat/Gol</th>
+                                                <th className="px-4 py-3 w-[25%] text-sm font-semibold border-b dark:border-gray-600 truncate">Jabatan</th>
                                                 <th className="px-4 py-3 w-[15%] text-sm font-semibold border-b dark:border-gray-600 text-center">Aksi</th>
                                             </tr>
                                         </thead>
@@ -491,6 +503,9 @@ export default function EmployeesPage() {
                                                     </td>
                                                     <td className="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">
                                                         {(currentPage - 1) * itemsPerPage + index + 1}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 truncate" title={emp.nip}>
+                                                        {emp.nip}
                                                     </td>
                                                     <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 truncate" title={emp.name}>
                                                         {emp.name}
@@ -590,6 +605,7 @@ export default function EmployeesPage() {
                                 <thead className="bg-gray-100 dark:bg-gray-700">
                                     <tr>
                                         <th className="px-4 py-3 text-center text-sm font-semibold w-12">No</th>
+                                        <th className="px-4 py-3 text-left text-sm font-semibold">NIP</th>
                                         <th className="px-4 py-3 text-left text-sm font-semibold">Nama</th>
                                         <th className="px-4 py-3 text-left text-sm font-semibold">Pangkat/Gol</th>
                                         <th className="px-4 py-3 text-left text-sm font-semibold">Jabatan</th>
@@ -599,6 +615,7 @@ export default function EmployeesPage() {
                                     {filteredEmployees.map((emp, index) => (
                                         <tr key={emp.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
                                             <td className="px-4 py-3 text-center text-sm text-gray-500">{index + 1}</td>
+                                            <td className="px-4 py-3 text-sm">{emp.nip}</td>
                                             <td className="px-4 py-3 font-semibold">{emp.name}</td>
                                             <td className="px-4 py-3 text-sm">{emp.rank}</td>
                                             <td className="px-4 py-3 text-sm">{emp.position}</td>

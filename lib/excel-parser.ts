@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx'
 
 export interface EmployeeRow {
+    nip: string
     name: string
     rank: string
     position: string
@@ -47,10 +48,11 @@ export function parseExcelFile(file: File): Promise<EmployeeRow[]> {
                     if (!row || row.length === 0 || !row[2] || String(row[2]).trim() === '') continue
 
                     employees.push({
+                        nip: String(row[1] || '').trim(), // Column B: NIP
                         name: String(row[2] || '').trim(), // Column C: Nama
                         rank: String(row[3] || '').trim(), // Column D: Pangkat/Gol
-                        position: String(row[4] || '').trim(), // Column E: Jabatan
-                        positionDate: String(row[5] || '').trim(), // Column F: TMT Jabatan
+                        position: String(row[5] || '').trim(), // Column F: Jabatan (E is skipped)
+                        positionDate: '', // Not used
                         unit: '', // Will be added later if needed
                     })
                 }
@@ -86,6 +88,7 @@ export function parseCSVFile(file: File): Promise<EmployeeRow[]> {
                     if (!row || row.length === 0 || !row[1]) continue
 
                     employees.push({
+                        nip: String(row[0] || '').trim(), // Column A: NIP (CSV is 0-indexed)
                         name: String(row[1] || '').trim(),
                         rank: String(row[2] || '').trim(),
                         position: String(row[3] || '').trim(),

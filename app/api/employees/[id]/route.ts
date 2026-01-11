@@ -23,6 +23,7 @@ export async function PUT(
         const { data, error } = await supabase
             .from('employees')
             .update({
+                nip: body.nip?.trim() || '',
                 name: body.name?.trim(),
                 rank: body.rank?.trim(),
                 position: body.position?.trim(),

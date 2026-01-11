@@ -57,6 +57,7 @@ export async function POST(request: Request) {
             .from('employees')
             .upsert(
                 employees.map((emp: any) => ({
+                    nip: emp.nip?.trim() || '',
                     name: emp.name?.trim() || '',
                     rank: emp.rank?.trim() || '',
                     position: emp.position?.trim() || '',
