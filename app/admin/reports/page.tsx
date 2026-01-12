@@ -13,6 +13,7 @@ function ReportsContent() {
     const [loading, setLoading] = useState(false)
     const [tab, setTab] = useState<'present' | 'absent'>('present')
     const [searchTerm, setSearchTerm] = useState('')
+    const [selectedPhoto, setSelectedPhoto] = useState<any>(null)
     const router = useRouter()
     const searchParams = useSearchParams()
 
@@ -316,7 +317,10 @@ function ReportsContent() {
                                             <th className="px-4 py-3 text-left text-sm font-semibold">Pangkat/Gol</th>
                                             <th className="px-4 py-3 text-left text-sm font-semibold">Jabatan</th>
                                             {tab === 'present' && (
-                                                <th className="px-4 py-3 text-left text-sm font-semibold">Waktu Check-In</th>
+                                                <>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold">Waktu Check-In</th>
+                                                    <th className="px-4 py-3 text-left text-sm font-semibold">Foto</th>
+                                                </>
                                             )}
                                         </tr>
                                     </thead>
@@ -337,9 +341,26 @@ function ReportsContent() {
                                                 <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{a.employee.rank}</td>
                                                 <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{a.employee.position}</td>
                                                 {tab === 'present' && (
-                                                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                                                        {a.checked_in_at ? new Date(a.checked_in_at).toLocaleTimeString('id-ID') : '-'}
-                                                    </td>
+                                                    <>
+                                                        <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                                                            {a.checked_in_at ? new Date(a.checked_in_at).toLocaleTimeString('id-ID') : '-'}
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            {a.photo_url ? (
+                                                                <button
+                                                                    onClick={() => setSelectedPhoto(a)}
+                                                                    className="text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                                                                >
+                                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                                    </svg>
+                                                                    Lihat
+                                                                </button>
+                                                            ) : (
+                                                                <span className="text-gray-400">-</span>
+                                                            )}
+                                                        </td>
+                                                    </>
                                                 )}
                                             </tr>
                                         ))}
@@ -348,6 +369,71 @@ function ReportsContent() {
                             </div>
                         </div>
                     </>
+                )}
+
+                {/* Photo Modal */}
+                {selectedPhoto && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4" onClick={() => setSelectedPhoto(null)}>
+                        <div className="bg-white dark:bg-gray-800 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+                            <div className="p-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                                        Foto Check-In - {selectedPhoto.employee.name}
+                                    </h3>
+                                    <button
+                                        onClick={() => setSelectedPhoto(null)}
+                                        className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                                    >
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {/* Photo */}
+                                    <div className="rounded-lg overflow-hidden">
+                                        <img
+                                            src={selectedPhoto.photo_url}
+                                            alt="Check-in photo"
+                                            className="w-full"
+                                        />
+                                    </div>
+
+                                    {/* Info */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">Waktu Check-In</p>
+                                            <p className="font-semibold text-gray-900 dark:text-white">
+                                                {selectedPhoto.checked_in_at ? new Date(selectedPhoto.checked_in_at).toLocaleString('id-ID') : '-'}
+                                            </p>
+                                        </div>
+
+                                        {selectedPhoto.latitude && selectedPhoto.longitude && (
+                                            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                                                <p className="text-sm text-gray-600 dark:text-gray-400">Lokasi GPS</p>
+                                                <p className="font-semibold text-gray-900 dark:text-white text-sm">
+                                                    {selectedPhoto.latitude.toFixed(6)}, {selectedPhoto.longitude.toFixed(6)}
+                                                </p>
+                                                <a
+                                                    href={`https://www.google.com/maps?q=${selectedPhoto.latitude},${selectedPhoto.longitude}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-indigo-600 hover:text-indigo-700 text-sm flex items-center gap-1 mt-1"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    </svg>
+                                                    Lihat di Google Maps
+                                                </a>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 )}
             </main>
         </div>

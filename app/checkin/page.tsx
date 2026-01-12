@@ -37,9 +37,6 @@ function CheckInContent() {
             localStorage.setItem('device_id', id)
         }
         setDeviceId(id)
-
-        // Request location permission on mount
-        requestLocation()
     }, [])
 
     useEffect(() => {
@@ -55,25 +52,27 @@ function CheckInContent() {
         }
     }, [employeeName])
 
-    const requestLocation = () => {
-        if ('geolocation' in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    setLocation({
-                        lat: position.coords.latitude,
-                        lon: position.coords.longitude
-                    })
-                },
-                (error) => {
-                    console.error('Location error:', error)
-                    setError('Tidak dapat mengakses lokasi. Pastikan izin lokasi diaktifkan.')
-                }
-            )
-        }
-    }
-
     const startCamera = async () => {
         try {
+            // Request location if not already available
+            if (!location) {
+                if ('geolocation' in navigator) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            setLocation({
+                                lat: position.coords.latitude,
+                                lon: position.coords.longitude
+                            })
+                        },
+                        (error) => {
+                            console.error('Location error:', error)
+                            setError('Tidak dapat mengakses lokasi. Pastikan izin lokasi diaktifkan.')
+                        }
+                    )
+                }
+            }
+
+            // Request camera access
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: 'user' },
                 audio: false
