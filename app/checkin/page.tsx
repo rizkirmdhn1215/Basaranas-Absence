@@ -74,17 +74,35 @@ function CheckInContent() {
 
             // Request camera access
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'user' },
+                video: {
+                    facingMode: 'user',
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                },
                 audio: false
             })
+
             if (videoRef.current) {
                 videoRef.current.srcObject = stream
                 streamRef.current = stream
+
+                // Wait for video to be ready and play it
+                videoRef.current.onloadedmetadata = () => {
+                    videoRef.current?.play()
+                }
+
                 setShowCamera(true)
+                setError('') // Clear any previous errors
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error('Camera error:', err)
-            setError('Tidak dapat mengakses kamera. Pastikan izin kamera diaktifkan.')
+            if (err.name === 'NotAllowedError') {
+                setError('Akses kamera ditolak. Silakan izinkan akses kamera di pengaturan browser.')
+            } else if (err.name === 'NotFoundError') {
+                setError('Kamera tidak ditemukan. Pastikan perangkat memiliki kamera.')
+            } else {
+                setError('Tidak dapat mengakses kamera. Silakan coba lagi.')
+            }
         }
     }
 
