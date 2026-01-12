@@ -7,7 +7,10 @@ export async function GET(
 ) {
     try {
         const { id } = await context.params
-        const token = generateQRToken(id)
+        const { searchParams } = new URL(request.url)
+        const interval = parseInt(searchParams.get('interval') || '30')
+
+        const token = generateQRToken(id, interval)
 
         return NextResponse.json({ token })
     } catch (error: any) {

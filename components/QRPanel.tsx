@@ -5,8 +5,27 @@ import { QRCodeSVG } from 'qrcode.react'
 
 export default function QRPanel({ sessionId, sessionName }: { sessionId: string, sessionName: string }) {
     const [token, setToken] = useState<string>('')
+    const [refreshInterval, setRefreshInterval] = useState(30)
     const [timeLeft, setTimeLeft] = useState(30)
     const [qrUrl, setQrUrl] = useState('')
+    const [isFullscreen, setIsFullscreen] = useState(false)
+
+    // Load saved interval from localStorage on mount
+    useEffect(() => {
+        const saved = localStorage.getItem('qr-refresh-interval')
+        if (saved) {
+            const interval = parseInt(saved)
+            if (interval >= 10 && interval <= 300) {
+                setRefreshInterval(interval)
+                setTimeLeft(interval)
+            }
+        }
+    }, [])
+
+    // Save interval to localStorage when it changes
+    useEffect(() => {
+        localStorage.setItem('qr-refresh-interval', refreshInterval.toString())
+    }, [refreshInterval])
 
     useEffect(() => {
         updateToken()
@@ -14,27 +33,24 @@ export default function QRPanel({ sessionId, sessionName }: { sessionId: string,
             setTimeLeft((prev) => {
                 if (prev <= 1) {
                     updateToken()
-                    return 30
+                    return refreshInterval
                 }
                 return prev - 1
             })
         }, 1000)
 
         return () => clearInterval(timer)
-    }, [sessionId])
+    }, [sessionId, refreshInterval])
 
     const updateToken = async () => {
         try {
-            // Fetch secure token from server-side API to ensure secret key safety
-            // We need a small API route to sign the token, or we can use a server action if we had them set up.
-            // Since we defined `generateQRToken` in a lib file which uses `process.env`, we cannot call it directly in client component.
-            // We need an API route to generate the token.
-            const res = await fetch(`/api/sessions/${sessionId}/token`)
+            // Fetch secure token from server-side API with the current interval
+            const res = await fetch(`/api/sessions/${sessionId}/token?interval=${refreshInterval}`)
             const data = await res.json()
             if (data.token) {
                 setToken(data.token)
-                // Construct the full check-in URL
-                const url = `${window.location.origin}/checkin?session=${sessionId}&token=${data.token}`
+                // Construct the full check-in URL with interval parameter
+                const url = `${window.location.origin}/checkin?session=${sessionId}&token=${data.token}&interval=${refreshInterval}`
                 setQrUrl(url)
             }
         } catch (error) {
@@ -42,9 +58,19 @@ export default function QRPanel({ sessionId, sessionName }: { sessionId: string,
         }
     }
 
-    const [isFullscreen, setIsFullscreen] = useState(false)
+    const handleIntervalChange = (newInterval: number) => {
+        setRefreshInterval(newInterval)
+        setTimeLeft(newInterval)
+        // Immediately regenerate QR code with new interval
+        setTimeout(() => updateToken(), 100)
+    }
 
-    // ... (keep useEffects and updateToken)
+    const presetIntervals = [
+        { value: 15, label: '15 detik' },
+        { value: 30, label: '30 detik' },
+        { value: 60, label: '1 menit' },
+        { value: 120, label: '2 menit' },
+    ]
 
     return (
         <>
@@ -62,6 +88,28 @@ export default function QRPanel({ sessionId, sessionName }: { sessionId: string,
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                     Scan Absensi
                 </h2>
+
+                {/* Timer Controls */}
+                <div className="mb-4 w-full">
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+                        Interval Refresh QR
+                    </label>
+                    <div className="flex gap-2 justify-center flex-wrap">
+                        {presetIntervals.map((preset) => (
+                            <button
+                                key={preset.value}
+                                onClick={() => handleIntervalChange(preset.value)}
+                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${refreshInterval === preset.value
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                    }`}
+                            >
+                                {preset.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
                 <div className="bg-white p-4 rounded-xl shadow-inner border border-gray-200 mb-4">
                     {qrUrl ? (
                         <QRCodeSVG value={qrUrl} size={200} level="H" includeMargin={true} />
@@ -73,7 +121,7 @@ export default function QRPanel({ sessionId, sessionName }: { sessionId: string,
                 </div>
 
                 <p className="text-sm text-gray-500">
-                    QR Code berubah otomatis <br />(Setiap 30 detik)
+                    QR Code berubah otomatis <br />(Setiap {refreshInterval} detik)
                 </p>
             </div>
 
@@ -89,9 +137,30 @@ export default function QRPanel({ sessionId, sessionName }: { sessionId: string,
                         </svg>
                     </button>
 
-                    <h1 className="text-4xl md:text-5xl font-bold text-indigo-600 dark:text-indigo-400 mb-8 text-center">
+                    <h1 className="text-4xl md:text-5xl font-bold text-indigo-600 dark:text-indigo-400 mb-4 text-center">
                         {sessionName}
                     </h1>
+
+                    {/* Timer Controls in Fullscreen */}
+                    <div className="mb-6">
+                        <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-3 text-center">
+                            Interval Refresh QR
+                        </label>
+                        <div className="flex gap-3 justify-center flex-wrap">
+                            {presetIntervals.map((preset) => (
+                                <button
+                                    key={preset.value}
+                                    onClick={() => handleIntervalChange(preset.value)}
+                                    className={`px-4 py-2 rounded-lg text-base font-medium transition-all ${refreshInterval === preset.value
+                                            ? 'bg-indigo-600 text-white shadow-lg'
+                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                        }`}
+                                >
+                                    {preset.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
 
                     <div className="bg-white p-8 rounded-3xl shadow-2xl border-4 border-indigo-100 dark:border-indigo-900">
                         {qrUrl ? (
@@ -103,8 +172,11 @@ export default function QRPanel({ sessionId, sessionName }: { sessionId: string,
                         )}
                     </div>
 
-                    <p className="text-xl text-gray-500 mt-8 animate-pulse">
+                    <p className="text-xl text-gray-500 mt-8">
                         Silakan scan QR Code untuk melakukan absensi
+                    </p>
+                    <p className="text-lg text-gray-400 mt-2">
+                        Refresh otomatis setiap {refreshInterval} detik
                     </p>
                 </div>
             )}

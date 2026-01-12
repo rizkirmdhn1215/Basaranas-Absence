@@ -9,6 +9,7 @@ function CheckInContent() {
     const searchParams = useSearchParams()
     const urlSessionId = searchParams.get('session')
     const urlToken = searchParams.get('token')
+    const urlInterval = parseInt(searchParams.get('interval') || '30')
 
     const [activeSession, setActiveSession] = useState<any>(null)
     const [employeeName, setEmployeeName] = useState('')
@@ -87,7 +88,8 @@ function CheckInContent() {
                     employeeName: employeeName.trim(),
                     sessionId: activeSession.id,
                     deviceId: deviceId,
-                    token: urlToken // Include token from URL check
+                    token: urlToken, // Include token from URL
+                    interval: urlInterval // Include interval from URL
                 }),
             })
 

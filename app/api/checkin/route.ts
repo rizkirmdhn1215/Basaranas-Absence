@@ -1,16 +1,17 @@
+import { createClient } from '@/utils/supabase/server'
 import { createAnonClient } from '@/utils/supabase/anon'
 import { NextResponse } from 'next/server'
 import { validateQRToken } from '@/lib/qr-token'
 
 export async function POST(request: Request) {
     try {
-        const supabase = createAnonClient()
+        const supabase = await createClient()
         const body = await request.json()
-        const { employeeName, sessionId, deviceId, token } = body
+        const { employeeName, sessionId, deviceId, token, interval = 30 } = body
 
         // Validate QR Token
         // We enforce token presence for security
-        if (!token || !validateQRToken(sessionId, token)) {
+        if (!token || !validateQRToken(sessionId, token, interval)) {
             return NextResponse.json(
                 { error: 'Invalid or expired QR code. Please scan again.' },
                 { status: 403 }
