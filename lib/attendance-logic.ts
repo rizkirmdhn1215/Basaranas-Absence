@@ -28,12 +28,18 @@ export interface CheckIn {
     checked_in_at: string
     ip_address: string | null
     device_id?: string | null
+    photo_url?: string | null
+    latitude?: number | null
+    longitude?: number | null
 }
 
 export interface AttendanceRecord {
     employee: Employee
     status: 'present' | 'absent'
     checked_in_at?: string
+    photo_url?: string | null
+    latitude?: number | null
+    longitude?: number | null
     flags?: string[] // 'duplicate_device', 'duplicate_ip'
     meta?: {
         ip_address?: string | null
@@ -104,6 +110,9 @@ export async function deriveAttendanceStatus(
             employee,
             status: checkIn ? 'present' : 'absent',
             checked_in_at: checkIn?.checked_in_at,
+            photo_url: checkIn?.photo_url,
+            latitude: checkIn?.latitude,
+            longitude: checkIn?.longitude,
             flags: flags.length > 0 ? flags : undefined,
             meta: checkIn ? {
                 ip_address: checkIn.ip_address,
