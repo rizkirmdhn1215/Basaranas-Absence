@@ -202,28 +202,65 @@ function CheckInContent() {
         // Draw video frame
         context.drawImage(video, 0, 0)
 
-        // Add timestamp and location overlay
+        // Add timestamp and location overlay (top-left, matching live view)
         const now = new Date()
-        const timestamp = now.toLocaleString('id-ID', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
+        const timeStr = now.toLocaleTimeString('id-ID', {
             hour: '2-digit',
             minute: '2-digit',
             second: '2-digit'
         })
-        const locationText = `Lat: ${location.lat.toFixed(6)}, Lon: ${location.lon.toFixed(6)}`
+        const dateStr = now.toLocaleDateString('id-ID', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric'
+        })
 
-        // Draw semi-transparent background
-        context.fillStyle = 'rgba(0, 0, 0, 0.6)'
-        context.fillRect(10, canvas.height - 70, canvas.width - 20, 60)
+        // Draw semi-transparent background box (top-left)
+        const padding = 16
+        const lineHeight = 24
+        const boxWidth = 400
+        const boxHeight = 160
 
-        // Draw text
+        context.fillStyle = 'rgba(0, 0, 0, 0.7)'
+        context.fillRect(padding, padding, boxWidth, boxHeight)
+
+        // Draw text content
+        let yPos = padding + 30
+
+        // BASARNAS header
         context.fillStyle = 'white'
-        context.font = 'bold 16px Arial'
-        context.fillText(timestamp, 20, canvas.height - 45)
+        context.font = 'bold 20px Arial'
+        context.fillText('BASARNAS', padding + 16, yPos)
+        yPos += lineHeight + 8
+
+        // Location
+        context.fillStyle = '#D1D5DB' // gray-300
         context.font = '14px Arial'
-        context.fillText(locationText, 20, canvas.height - 20)
+        context.fillText('Location:', padding + 16, yPos)
+        context.fillStyle = '#FCD34D' // yellow-300
+        const locationText = locationName.length > 35 ? locationName.substring(0, 35) + '...' : locationName
+        context.fillText(locationText, padding + 100, yPos)
+        yPos += lineHeight
+
+        // Coordinates
+        context.fillStyle = '#D1D5DB'
+        context.fillText('Coordinates:', padding + 16, yPos)
+        context.fillStyle = '#6EE7B7' // green-300
+        context.fillText(`${location.lat.toFixed(6)}, ${location.lon.toFixed(6)}`, padding + 120, yPos)
+        yPos += lineHeight
+
+        // Time
+        context.fillStyle = '#D1D5DB'
+        context.fillText('Time:', padding + 16, yPos)
+        context.fillStyle = '#93C5FD' // blue-300
+        context.fillText(timeStr, padding + 70, yPos)
+        yPos += lineHeight
+
+        // Date
+        context.fillStyle = '#D1D5DB'
+        context.fillText('Date:', padding + 16, yPos)
+        context.fillStyle = '#93C5FD'
+        context.fillText(dateStr, padding + 70, yPos)
 
         // Compress and get base64
         const compressedPhoto = canvas.toDataURL('image/jpeg', 0.7)
