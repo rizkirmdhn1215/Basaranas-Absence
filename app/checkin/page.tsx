@@ -23,6 +23,9 @@ function CheckInContent() {
     const [showCamera, setShowCamera] = useState(false)
     const [photoData, setPhotoData] = useState<string>('')
     const [location, setLocation] = useState<{ lat: number, lon: number } | null>(null)
+    const [locationName, setLocationName] = useState<string>('Mengambil lokasi...')
+    const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
+    const [currentTime, setCurrentTime] = useState(new Date())
     const videoRef = useRef<HTMLVideoElement>(null)
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const streamRef = useRef<MediaStream | null>(null)
@@ -52,6 +55,68 @@ function CheckInContent() {
         }
     }, [employeeName])
 
+    // Attach camera stream to video element when modal opens
+    useEffect(() => {
+        if (showCamera && cameraStream && videoRef.current) {
+            console.log('Attaching stream to video element in useEffect')
+            videoRef.current.srcObject = cameraStream
+            streamRef.current = cameraStream
+
+            videoRef.current.onloadedmetadata = () => {
+                console.log('Video metadata loaded, playing...')
+                videoRef.current?.play().then(() => {
+                    console.log('Video playing successfully')
+                }).catch(err => {
+                    console.error('Error playing video:', err)
+                })
+            }
+        }
+    }, [showCamera, cameraStream])
+
+    // Update current time every second for live overlay
+    useEffect(() => {
+        if (showCamera) {
+            const timer = setInterval(() => {
+                setCurrentTime(new Date())
+            }, 1000)
+            return () => clearInterval(timer)
+        }
+    }, [showCamera])
+
+    // Reverse geocode coordinates to get location name
+    const reverseGeocode = async (lat: number, lon: number) => {
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`,
+                {
+                    headers: {
+                        'User-Agent': 'Basarnas-CheckIn-App'
+                    }
+                }
+            )
+            const data = await response.json()
+
+            if (data.display_name) {
+                // Extract relevant parts of the address
+                const address = data.address
+                const parts = []
+
+                if (address.road) parts.push(address.road)
+                if (address.suburb) parts.push(address.suburb)
+                if (address.city || address.town || address.village) {
+                    parts.push(address.city || address.town || address.village)
+                }
+
+                setLocationName(parts.join(', ') || data.display_name)
+            } else {
+                setLocationName('Lokasi tidak diketahui')
+            }
+        } catch (error) {
+            console.error('Reverse geocoding error:', error)
+            setLocationName('Gagal mendapatkan nama lokasi')
+        }
+    }
+
     const startCamera = async () => {
         try {
             // Request location if not already available
@@ -59,19 +124,26 @@ function CheckInContent() {
                 if ('geolocation' in navigator) {
                     navigator.geolocation.getCurrentPosition(
                         (position) => {
-                            setLocation({
+                            const coords = {
                                 lat: position.coords.latitude,
                                 lon: position.coords.longitude
-                            })
+                            }
+                            setLocation(coords)
+                            console.log('Location acquired:', position.coords)
+
+                            // Reverse geocode to get location name
+                            reverseGeocode(coords.lat, coords.lon)
                         },
                         (error) => {
                             console.error('Location error:', error)
                             setError('Tidak dapat mengakses lokasi. Pastikan izin lokasi diaktifkan.')
+                            setLocationName('Lokasi tidak tersedia')
                         }
                     )
                 }
             }
 
+            console.log('Requesting camera access...')
             // Request camera access
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: {
@@ -82,18 +154,14 @@ function CheckInContent() {
                 audio: false
             })
 
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream
-                streamRef.current = stream
+            console.log('Camera stream acquired:', stream)
+            console.log('Video tracks:', stream.getVideoTracks())
 
-                // Wait for video to be ready and play it
-                videoRef.current.onloadedmetadata = () => {
-                    videoRef.current?.play()
-                }
-
-                setShowCamera(true)
-                setError('') // Clear any previous errors
-            }
+            // Store stream in state - useEffect will attach it to video element
+            setCameraStream(stream)
+            setShowCamera(true)
+            setError('')
+            console.log('Camera modal should open now, useEffect will attach stream')
         } catch (err: any) {
             console.error('Camera error:', err)
             if (err.name === 'NotAllowedError') {
@@ -111,6 +179,7 @@ function CheckInContent() {
             streamRef.current.getTracks().forEach(track => track.stop())
             streamRef.current = null
         }
+        setCameraStream(null)
         setShowCamera(false)
     }
 
@@ -428,16 +497,54 @@ function CheckInContent() {
                 {/* Camera Modal */}
                 {showCamera && (
                     <div className="fixed inset-0 z-50 bg-black flex flex-col">
-                        <div className="flex-1 flex items-center justify-center p-4">
+                        {/* Video Container */}
+                        <div className="flex-1 flex items-center justify-center overflow-hidden relative">
                             <video
                                 ref={videoRef}
                                 autoPlay
                                 playsInline
                                 muted
-                                className="max-w-full max-h-full"
+                                className="w-full h-full object-contain"
                             />
+
+                            {/* Live Timestamp Overlay */}
+                            <div className="absolute top-4 left-4 bg-black bg-opacity-70 text-white p-4 rounded-lg font-mono text-sm max-w-md">
+                                <div className="font-bold text-lg mb-2">BASARNAS</div>
+                                <div className="space-y-1">
+                                    {location && (
+                                        <>
+                                            <div>
+                                                <span className="text-gray-300">Location:</span>{' '}
+                                                <span className="text-yellow-300">
+                                                    {locationName}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <span className="text-gray-300">Coordinates:</span>{' '}
+                                                <span className="text-green-300">
+                                                    {location.lat.toFixed(6)}, {location.lon.toFixed(6)}
+                                                </span>
+                                            </div>
+                                        </>
+                                    )}
+                                    <div>
+                                        <span className="text-gray-300">Time:</span>{' '}
+                                        <span className="text-blue-300">
+                                            {currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-300">Date:</span>{' '}
+                                        <span className="text-blue-300">
+                                            {currentTime.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div className="p-4 bg-gray-900 flex gap-4 justify-center">
+
+                        {/* Controls */}
+                        <div className="flex-shrink-0 p-6 bg-gray-900 flex gap-4 justify-center">
                             <button
                                 onClick={capturePhoto}
                                 className="bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-4 rounded-lg text-lg flex items-center gap-2"

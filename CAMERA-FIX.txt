@@ -1,0 +1,10 @@
+// Quick fix script - copy this into startCamera function
+
+console.log('Camera stream acquired:', stream)
+console.log('Video tracks:', stream.getVideoTracks())
+
+// Store stream in state - useEffect will attach it to video element  
+setCameraStream(stream)
+setShowCamera(true)
+setError('')
+console.log('Camera modal should open now, useEffect will attach stream')
