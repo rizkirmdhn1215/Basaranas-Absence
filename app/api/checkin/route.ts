@@ -72,37 +72,21 @@ export async function POST(request: Request) {
             )
         }
 
-        // Check time and auto-close
-        const now = new Date()
-        // Use Asia/Jakarta (WIB) for consistent time comparison
-        const currentTime = now.toLocaleTimeString('en-GB', {
-            timeZone: 'Asia/Jakarta',
-            hour: '2-digit',
-            minute: '2-digit'
-        })
-
-        // If session is open but time has passed, close it automatically
-        if (session.status === 'open' && currentTime > session.end_time) {
-            await supabase
-                .from('sessions')
-                .update({
-                    status: 'closed',
-                    closed_at: new Date().toISOString()
-                })
-                .eq('id', sessionId)
-
-            return NextResponse.json(
-                { error: 'Sesi absensi telah berakhir dan ditutup otomatis.' },
-                { status: 400 }
-            )
-        }
-
+        // Check session status
         if (session.status !== 'open') {
             return NextResponse.json(
                 { error: 'Sesi absensi sudah ditutup' },
                 { status: 400 }
             )
         }
+
+        // Check if session has started (but allow late check-ins after end_time)
+        const now = new Date()
+        const currentTime = now.toLocaleTimeString('en-GB', {
+            timeZone: 'Asia/Jakarta',
+            hour: '2-digit',
+            minute: '2-digit'
+        })
 
         if (currentTime < session.start_time) {
             return NextResponse.json(
