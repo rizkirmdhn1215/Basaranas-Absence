@@ -1,23 +1,14 @@
 import { createClient } from '@/utils/supabase/server'
 import { createAnonClient } from '@/utils/supabase/anon'
 import { NextResponse } from 'next/server'
-import { validateQRToken } from '@/lib/qr-token'
 
 export async function POST(request: Request) {
     try {
         const supabase = await createClient()
         const body = await request.json()
-        const { employeeName, sessionId, deviceId, token, interval = 3600 } = body
+        const { employeeName, sessionId, deviceId, photoData, latitude, longitude } = body
 
-        // Validate QR Token
-        // We enforce token presence for security
-        if (!token || !validateQRToken(sessionId, token, interval)) {
-            return NextResponse.json(
-                { error: 'Invalid or expired QR code. Please scan again.' },
-                { status: 403 }
-            )
-        }
-
+        // Validate required fields
         if (!employeeName || !sessionId) {
             return NextResponse.json(
                 { error: 'Nama karyawan dan session ID diperlukan' },
@@ -25,8 +16,21 @@ export async function POST(request: Request) {
             )
         }
 
+        if (!photoData) {
+            return NextResponse.json(
+                { error: 'Foto check-in diperlukan' },
+                { status: 400 }
+            )
+        }
+
+        if (!latitude || !longitude) {
+            return NextResponse.json(
+                { error: 'Lokasi GPS diperlukan' },
+                { status: 400 }
+            )
+        }
+
         // Find employee by name OR NIP (case-insensitive)
-        // Try searching by name first
         let { data: employees, error: empError } = await supabase
             .from('employees')
             .select('*')
@@ -110,12 +114,61 @@ export async function POST(request: Request) {
             )
         }
 
-        // Create check-in record
-        // Note: ensuring device_id is handled if passed
+        // Upload photo to Supabase Storage
+        let photoUrl = ''
+        try {
+            // Convert base64 to blob
+            const base64Data = photoData.split(',')[1]
+            const byteCharacters = atob(base64Data)
+            const byteNumbers = new Array(byteCharacters.length)
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i)
+            }
+            const byteArray = new Uint8Array(byteNumbers)
+            const blob = new Blob([byteArray], { type: 'image/jpeg' })
+
+            // Generate unique filename
+            const timestamp = Date.now()
+            const filename = `${sessionId}/${employee.id}_${timestamp}.jpg`
+
+            // Upload to Supabase Storage
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('check-in-photos')
+                .upload(filename, blob, {
+                    contentType: 'image/jpeg',
+                    upsert: false
+                })
+
+            if (uploadError) {
+                console.error('Photo upload error:', uploadError)
+                return NextResponse.json(
+                    { error: 'Gagal menyimpan foto. Silakan coba lagi.' },
+                    { status: 500 }
+                )
+            }
+
+            // Get public URL
+            const { data: urlData } = supabase.storage
+                .from('check-in-photos')
+                .getPublicUrl(filename)
+
+            photoUrl = urlData.publicUrl
+        } catch (photoError) {
+            console.error('Photo processing error:', photoError)
+            return NextResponse.json(
+                { error: 'Gagal memproses foto. Silakan coba lagi.' },
+                { status: 500 }
+            )
+        }
+
+        // Create check-in record with photo and GPS
         const insertData: any = {
             session_id: sessionId,
             employee_id: employee.id,
             ip_address: request.headers.get('x-forwarded-for') || 'unknown',
+            photo_url: photoUrl,
+            latitude: latitude,
+            longitude: longitude
         }
 
         if (deviceId) {
@@ -129,28 +182,6 @@ export async function POST(request: Request) {
             .single()
 
         if (checkInError) {
-            // Check if error is related to missing column
-            if (checkInError.message?.includes('device_id')) {
-                // Fallback if schema not updated yet: try insert without device_id
-                delete insertData.device_id
-                const { data: fallbackCheckIn, error: fallbackError } = await supabase
-                    .from('check_ins')
-                    .insert(insertData)
-                    .select()
-                    .single()
-
-                if (fallbackError) return NextResponse.json({ error: fallbackError.message }, { status: 500 })
-
-                return NextResponse.json({
-                    success: true,
-                    employee: {
-                        name: employee.name,
-                        position: employee.position,
-                        rank: employee.rank,
-                    },
-                    checkedInAt: fallbackCheckIn.checked_in_at,
-                })
-            }
             return NextResponse.json({ error: checkInError.message }, { status: 500 })
         }
 
@@ -162,8 +193,10 @@ export async function POST(request: Request) {
                 rank: employee.rank,
             },
             checkedInAt: checkIn.checked_in_at,
+            photoUrl: photoUrl
         })
     } catch (error: any) {
+        console.error('Check-in error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 }

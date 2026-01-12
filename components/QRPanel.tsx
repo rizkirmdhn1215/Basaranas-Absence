@@ -4,43 +4,14 @@ import { useState, useEffect } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 
 export default function QRPanel({ sessionId, sessionName }: { sessionId: string, sessionName: string }) {
-    const [token, setToken] = useState<string>('')
-    const [timeLeft, setTimeLeft] = useState(3600)
     const [qrUrl, setQrUrl] = useState('')
     const [isFullscreen, setIsFullscreen] = useState(false)
 
-    const refreshInterval = 3600 // Hardcoded to 1 hour
-
     useEffect(() => {
-        updateToken()
-        const timer = setInterval(() => {
-            setTimeLeft((prev) => {
-                if (prev <= 1) {
-                    updateToken()
-                    return refreshInterval
-                }
-                return prev - 1
-            })
-        }, 1000)
-
-        return () => clearInterval(timer)
+        // Generate static QR URL (no token needed)
+        const url = `${window.location.origin}/checkin?session=${sessionId}`
+        setQrUrl(url)
     }, [sessionId])
-
-    const updateToken = async () => {
-        try {
-            // Fetch secure token from server-side API with the hardcoded interval
-            const res = await fetch(`/api/sessions/${sessionId}/token?interval=${refreshInterval}`)
-            const data = await res.json()
-            if (data.token) {
-                setToken(data.token)
-                // Construct the full check-in URL with interval parameter
-                const url = `${window.location.origin}/checkin?session=${sessionId}&token=${data.token}&interval=${refreshInterval}`
-                setQrUrl(url)
-            }
-        } catch (error) {
-            console.error('Failed to update QR token', error)
-        }
-    }
 
     return (
         <>
@@ -56,7 +27,7 @@ export default function QRPanel({ sessionId, sessionName }: { sessionId: string,
                 </button>
 
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                    Scan Absensi
+                    Scan untuk Check-In
                 </h2>
 
                 <div className="bg-white p-4 rounded-xl shadow-inner border border-gray-200 mb-4">
@@ -70,7 +41,7 @@ export default function QRPanel({ sessionId, sessionName }: { sessionId: string,
                 </div>
 
                 <p className="text-sm text-gray-500">
-                    QR Code berubah otomatis <br />(Setiap 1 jam)
+                    QR Code Permanen <br />Scan untuk melakukan absensi
                 </p>
             </div>
 
@@ -102,9 +73,6 @@ export default function QRPanel({ sessionId, sessionName }: { sessionId: string,
 
                     <p className="text-xl text-gray-500 mt-8">
                         Silakan scan QR Code untuk melakukan absensi
-                    </p>
-                    <p className="text-lg text-gray-400 mt-2">
-                        Refresh otomatis setiap 1 jam
                     </p>
                 </div>
             )}
