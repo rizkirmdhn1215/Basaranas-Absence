@@ -9,7 +9,7 @@ function CheckInContent() {
     const searchParams = useSearchParams()
     const urlSessionId = searchParams.get('session')
     const urlToken = searchParams.get('token')
-    const urlInterval = parseInt(searchParams.get('interval') || '30')
+    const urlInterval = parseInt(searchParams.get('interval') || '3600')
 
     const [activeSession, setActiveSession] = useState<any>(null)
     const [employeeName, setEmployeeName] = useState('')

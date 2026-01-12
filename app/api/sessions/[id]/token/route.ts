@@ -8,7 +8,7 @@ export async function GET(
     try {
         const { id } = await context.params
         const { searchParams } = new URL(request.url)
-        const interval = parseInt(searchParams.get('interval') || '30')
+        const interval = parseInt(searchParams.get('interval') || '3600')
 
         const token = generateQRToken(id, interval)
 

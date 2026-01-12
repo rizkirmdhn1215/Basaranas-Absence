@@ -9,7 +9,7 @@ const SECRET = process.env.NEXTAUTH_SECRET || 'fallback-secret-key-123'
  * 2. Create signature using HMAC(sessionId + timestamp, SECRET)
  * 3. Return timestamp + signature
  */
-export function generateQRToken(sessionId: string, interval: number = 30): string {
+export function generateQRToken(sessionId: string, interval: number = 3600): string {
     const timestamp = Math.floor(Date.now() / (interval * 1000)) // Configurable interval windows
     const data = `${sessionId}:${timestamp}`
     const signature = createHmac('sha256', SECRET).update(data).digest('hex').substring(0, 16)
@@ -20,7 +20,7 @@ export function generateQRToken(sessionId: string, interval: number = 30): strin
  * Validate a QR token
  * Returns true if token is valid and within allowable window
  */
-export function validateQRToken(sessionId: string, token: string, interval: number = 30): boolean {
+export function validateQRToken(sessionId: string, token: string, interval: number = 3600): boolean {
     if (!token) return false
 
     const [tokenTimestamp, tokenSignature] = token.split('.')

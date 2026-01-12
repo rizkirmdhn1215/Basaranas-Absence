@@ -5,8 +5,8 @@ import { QRCodeSVG } from 'qrcode.react'
 
 export default function QRPanel({ sessionId, sessionName }: { sessionId: string, sessionName: string }) {
     const [token, setToken] = useState<string>('')
-    const [refreshInterval, setRefreshInterval] = useState(30)
-    const [timeLeft, setTimeLeft] = useState(30)
+    const [refreshInterval, setRefreshInterval] = useState(3600)
+    const [timeLeft, setTimeLeft] = useState(3600)
     const [qrUrl, setQrUrl] = useState('')
     const [isFullscreen, setIsFullscreen] = useState(false)
 
@@ -152,8 +152,8 @@ export default function QRPanel({ sessionId, sessionName }: { sessionId: string,
                                     key={preset.value}
                                     onClick={() => handleIntervalChange(preset.value)}
                                     className={`px-4 py-2 rounded-lg text-base font-medium transition-all ${refreshInterval === preset.value
-                                            ? 'bg-indigo-600 text-white shadow-lg'
-                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                        ? 'bg-indigo-600 text-white shadow-lg'
+                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                                         }`}
                                 >
                                     {preset.label}

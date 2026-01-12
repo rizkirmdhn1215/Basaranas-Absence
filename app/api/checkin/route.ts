@@ -7,7 +7,7 @@ export async function POST(request: Request) {
     try {
         const supabase = await createClient()
         const body = await request.json()
-        const { employeeName, sessionId, deviceId, token, interval = 30 } = body
+        const { employeeName, sessionId, deviceId, token, interval = 3600 } = body
 
         // Validate QR Token
         // We enforce token presence for security
