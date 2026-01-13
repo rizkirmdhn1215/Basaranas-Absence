@@ -144,12 +144,12 @@ function CheckInContent() {
             }
 
             console.log('Requesting camera access...')
-            // Request camera access
+            // Request camera access with lower resolution for better compatibility
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: {
                     facingMode: 'user',
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
                 },
                 audio: false
             })
@@ -195,12 +195,27 @@ function CheckInContent() {
 
         if (!context) return
 
-        // Set canvas size
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
+        // Calculate scaled dimensions (max 800px on longest side for better compatibility)
+        const maxDimension = 800
+        let width = video.videoWidth
+        let height = video.videoHeight
 
-        // Draw video frame
-        context.drawImage(video, 0, 0)
+        if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+                height = Math.round((height * maxDimension) / width)
+                width = maxDimension
+            } else {
+                width = Math.round((width * maxDimension) / height)
+                height = maxDimension
+            }
+        }
+
+        // Set canvas size to scaled dimensions
+        canvas.width = width
+        canvas.height = height
+
+        // Draw video frame with scaling
+        context.drawImage(video, 0, 0, width, height)
 
         // Add timestamp and location overlay (top-left, matching live view)
         const now = new Date()
@@ -215,55 +230,58 @@ function CheckInContent() {
             year: 'numeric'
         })
 
-        // Draw semi-transparent background box (top-left)
-        const padding = 16
-        const lineHeight = 24
-        const boxWidth = 400
-        const boxHeight = 160
+        // Draw semi-transparent background box (top-left) - scale based on canvas size
+        const scale = Math.min(width / 640, 1) // Scale overlay for smaller images
+        const padding = Math.round(16 * scale)
+        const lineHeight = Math.round(24 * scale)
+        const boxWidth = Math.round(400 * scale)
+        const boxHeight = Math.round(160 * scale)
+        const fontSize = Math.round(14 * scale)
+        const headerSize = Math.round(20 * scale)
 
         context.fillStyle = 'rgba(0, 0, 0, 0.7)'
         context.fillRect(padding, padding, boxWidth, boxHeight)
 
         // Draw text content
-        let yPos = padding + 30
+        let yPos = padding + Math.round(30 * scale)
 
         // BASARNAS header
         context.fillStyle = 'white'
-        context.font = 'bold 20px Arial'
-        context.fillText('BASARNAS', padding + 16, yPos)
-        yPos += lineHeight + 8
+        context.font = `bold ${headerSize}px Arial`
+        context.fillText('BASARNAS', padding + Math.round(16 * scale), yPos)
+        yPos += lineHeight + Math.round(8 * scale)
 
         // Location
         context.fillStyle = '#D1D5DB' // gray-300
-        context.font = '14px Arial'
-        context.fillText('Location:', padding + 16, yPos)
+        context.font = `${fontSize}px Arial`
+        context.fillText('Location:', padding + Math.round(16 * scale), yPos)
         context.fillStyle = '#FCD34D' // yellow-300
         const locationText = locationName.length > 35 ? locationName.substring(0, 35) + '...' : locationName
-        context.fillText(locationText, padding + 100, yPos)
+        context.fillText(locationText, padding + Math.round(100 * scale), yPos)
         yPos += lineHeight
 
         // Coordinates
         context.fillStyle = '#D1D5DB'
-        context.fillText('Coordinates:', padding + 16, yPos)
+        context.fillText('Coordinates:', padding + Math.round(16 * scale), yPos)
         context.fillStyle = '#6EE7B7' // green-300
-        context.fillText(`${location.lat.toFixed(6)}, ${location.lon.toFixed(6)}`, padding + 120, yPos)
+        context.fillText(`${location.lat.toFixed(6)}, ${location.lon.toFixed(6)}`, padding + Math.round(120 * scale), yPos)
         yPos += lineHeight
 
         // Time
         context.fillStyle = '#D1D5DB'
-        context.fillText('Time:', padding + 16, yPos)
+        context.fillText('Time:', padding + Math.round(16 * scale), yPos)
         context.fillStyle = '#93C5FD' // blue-300
-        context.fillText(timeStr, padding + 70, yPos)
+        context.fillText(timeStr, padding + Math.round(70 * scale), yPos)
         yPos += lineHeight
 
         // Date
         context.fillStyle = '#D1D5DB'
-        context.fillText('Date:', padding + 16, yPos)
+        context.fillText('Date:', padding + Math.round(16 * scale), yPos)
         context.fillStyle = '#93C5FD'
-        context.fillText(dateStr, padding + 70, yPos)
+        context.fillText(dateStr, padding + Math.round(70 * scale), yPos)
 
-        // Compress and get base64
-        const compressedPhoto = canvas.toDataURL('image/jpeg', 0.7)
+        // Compress more aggressively for better compatibility with older devices
+        const compressedPhoto = canvas.toDataURL('image/jpeg', 0.5)
         setPhotoData(compressedPhoto)
         stopCamera()
     }
@@ -313,6 +331,10 @@ function CheckInContent() {
         setError('')
 
         try {
+            // Log photo size for debugging
+            const photoSizeKB = Math.round((photoData.length * 3) / 4 / 1024)
+            console.log(`Uploading photo: ~${photoSizeKB}KB`)
+
             const res = await fetch('/api/checkin', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -334,10 +356,12 @@ function CheckInContent() {
                 setEmployeeName('')
                 setSuggestions([])
             } else {
+                console.error('Check-in error:', data.error)
                 setError(data.error || 'Gagal melakukan check-in')
             }
-        } catch (error) {
-            setError('Terjadi kesalahan. Silakan coba lagi.')
+        } catch (error: any) {
+            console.error('Network error:', error)
+            setError('Terjadi kesalahan jaringan. Silakan coba lagi.')
         } finally {
             setLoading(false)
         }

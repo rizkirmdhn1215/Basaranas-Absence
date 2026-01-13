@@ -117,8 +117,31 @@ export async function POST(request: Request) {
         // Upload photo to Supabase Storage
         let photoUrl = ''
         try {
+            // Validate base64 data exists
+            if (!photoData.includes(',')) {
+                console.error('Invalid photo data format')
+                return NextResponse.json(
+                    { error: 'Format foto tidak valid' },
+                    { status: 400 }
+                )
+            }
+
             // Convert base64 to blob
             const base64Data = photoData.split(',')[1]
+
+            // Log size for debugging
+            const estimatedSizeKB = Math.round((base64Data.length * 3) / 4 / 1024)
+            console.log(`Photo size: ~${estimatedSizeKB}KB`)
+
+            // Check if image is too large (>5MB base64 = ~3.75MB actual)
+            if (base64Data.length > 5 * 1024 * 1024) {
+                console.error(`Photo too large: ${estimatedSizeKB}KB`)
+                return NextResponse.json(
+                    { error: 'Foto terlalu besar. Silakan coba lagi dengan kualitas lebih rendah.' },
+                    { status: 400 }
+                )
+            }
+
             const byteCharacters = atob(base64Data)
             const byteNumbers = new Array(byteCharacters.length)
             for (let i = 0; i < byteCharacters.length; i++) {
@@ -126,6 +149,8 @@ export async function POST(request: Request) {
             }
             const byteArray = new Uint8Array(byteNumbers)
             const blob = new Blob([byteArray], { type: 'image/jpeg' })
+
+            console.log(`Blob created: ${blob.size} bytes`)
 
             // Generate unique filename
             const timestamp = Date.now()
@@ -147,14 +172,17 @@ export async function POST(request: Request) {
                 )
             }
 
+            console.log('Photo uploaded successfully:', filename)
+
             // Get public URL
             const { data: urlData } = supabase.storage
                 .from('check-in-photos')
                 .getPublicUrl(filename)
 
             photoUrl = urlData.publicUrl
-        } catch (photoError) {
+        } catch (photoError: any) {
             console.error('Photo processing error:', photoError)
+            console.error('Error details:', photoError.message, photoError.stack)
             return NextResponse.json(
                 { error: 'Gagal memproses foto. Silakan coba lagi.' },
                 { status: 500 }
