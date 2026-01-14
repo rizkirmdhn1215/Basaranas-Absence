@@ -195,8 +195,8 @@ function CheckInContent() {
 
         if (!context) return
 
-        // Calculate scaled dimensions (max 800px on longest side for better compatibility)
-        const maxDimension = 800
+        // Calculate scaled dimensions (max 640px on longest side for better compatibility with older devices)
+        const maxDimension = 640
         let width = video.videoWidth
         let height = video.videoHeight
 
@@ -281,7 +281,8 @@ function CheckInContent() {
         context.fillText(dateStr, padding + Math.round(70 * scale), yPos)
 
         // Compress more aggressively for better compatibility with older devices
-        const compressedPhoto = canvas.toDataURL('image/jpeg', 0.5)
+        // Quality 0.65 = good balance between size and quality
+        const compressedPhoto = canvas.toDataURL('image/jpeg', 0.65)
         setPhotoData(compressedPhoto)
         stopCamera()
     }
