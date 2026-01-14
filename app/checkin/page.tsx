@@ -567,6 +567,7 @@ function CheckInContent() {
                                 playsInline
                                 muted
                                 className="w-full h-full object-contain"
+                                style={{ transform: 'scaleX(-1)' }}
                             />
 
                             {/* Live Timestamp Overlay */}

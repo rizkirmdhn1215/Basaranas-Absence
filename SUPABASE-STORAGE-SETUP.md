@@ -16,24 +16,33 @@
 ## Set Bucket Policies (Important!)
 
 After creating the bucket, you need to set up policies to allow:
-- **Authenticated users** to upload photos
+- **Anyone (including anonymous users)** to upload photos
 - **Public** to read/view photos
 
-### Policy 1: Allow Authenticated Upload
+### Policy 1: Allow Public Upload (CRITICAL!)
 
 ```sql
-CREATE POLICY "Allow authenticated uploads"
+CREATE POLICY "Allow public uploads to check-in-photos"
 ON storage.objects FOR INSERT
-TO authenticated
+TO public
 WITH CHECK (bucket_id = 'check-in-photos');
 ```
 
 ### Policy 2: Allow Public Read
 
 ```sql
-CREATE POLICY "Allow public read"
+CREATE POLICY "Allow public read from check-in-photos"
 ON storage.objects FOR SELECT
 TO public
+USING (bucket_id = 'check-in-photos');
+```
+
+### Policy 3: Allow Authenticated Delete (Admin only)
+
+```sql
+CREATE POLICY "Allow authenticated delete from check-in-photos"
+ON storage.objects FOR DELETE
+TO authenticated
 USING (bucket_id = 'check-in-photos');
 ```
 
