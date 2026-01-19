@@ -214,8 +214,16 @@ function CheckInContent() {
         canvas.width = width
         canvas.height = height
 
+        // Mirror the canvas horizontally to match the video preview
+        context.save()
+        context.scale(-1, 1)
+        context.translate(-width, 0)
+
         // Draw video frame with scaling
         context.drawImage(video, 0, 0, width, height)
+
+        // Restore context for overlay drawing
+        context.restore()
 
         // Add timestamp and location overlay (top-left, matching live view)
         const now = new Date()
