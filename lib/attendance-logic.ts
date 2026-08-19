@@ -1,12 +1,13 @@
-import { createClient } from '@/utils/supabase/server'
+import { prisma } from './prisma'
 
 export interface Employee {
     id: string
     name: string
-    rank: string
-    position: string
-    position_date: string
-    unit: string
+    nip?: string | null
+    rank: string | null
+    position: string | null
+    position_date?: string | null
+    unit: string | null
     is_active: boolean
 }
 
@@ -54,70 +55,67 @@ export interface AttendanceRecord {
 export async function deriveAttendanceStatus(
     sessionId: string
 ): Promise<AttendanceRecord[]> {
-    const supabase = await createClient()
-
     // Get all active employees
-    const { data: employees, error: empError } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('is_active', true)
-        .order('name')
-
-    if (empError) throw empError
+    const employees = await prisma.employee.findMany({
+        where: { isActive: true },
+        orderBy: { name: 'asc' },
+    })
 
     // Get all check-ins for this session
-    const { data: checkIns, error: checkError } = await supabase
-        .from('check_ins')
-        .select('*')
-        .eq('session_id', sessionId)
-
-    if (checkError) throw checkError
+    const checkIns = await prisma.checkIn.findMany({
+        where: { sessionId },
+    })
 
     // Analyze duplicates
     const deviceCounts = new Map<string, number>()
     const ipCounts = new Map<string, number>()
 
-    checkIns?.forEach((c) => {
-        if (c.device_id) {
-            deviceCounts.set(c.device_id, (deviceCounts.get(c.device_id) || 0) + 1)
+    checkIns.forEach((c) => {
+        if (c.deviceId) {
+            deviceCounts.set(c.deviceId, (deviceCounts.get(c.deviceId) || 0) + 1)
         }
-        if (c.ip_address) {
-            ipCounts.set(c.ip_address, (ipCounts.get(c.ip_address) || 0) + 1)
+        if (c.ipAddress) {
+            ipCounts.set(c.ipAddress, (ipCounts.get(c.ipAddress) || 0) + 1)
         }
     })
 
-    // Create a map of employee_id -> check_in
+    // Create a map of employeeId -> checkIn
     const checkInMap = new Map(
-        checkIns?.map((c) => [c.employee_id, c]) || []
+        checkIns.map((c) => [c.employeeId, c])
     )
 
     // Derive attendance status
-    const attendance: AttendanceRecord[] = (employees || []).map((employee) => {
-        const checkIn = checkInMap.get(employee.id)
+    const attendance: AttendanceRecord[] = employees.map((emp) => {
+        const checkIn = checkInMap.get(emp.id)
         const flags: string[] = []
 
         if (checkIn) {
-            if (checkIn.device_id && (deviceCounts.get(checkIn.device_id) || 0) >= 2) {
+            if (checkIn.deviceId && (deviceCounts.get(checkIn.deviceId) || 0) >= 2) {
                 flags.push('duplicate_device')
             }
-            // Optional: Flag IP duplicates if stricter control is needed, but often IP is shared (WIFI)
-            // if (checkIn.ip_address && (ipCounts.get(checkIn.ip_address) || 0) >= 2) {
-            //     flags.push('duplicate_ip') 
-            // }
         }
 
         return {
-            employee,
+            employee: {
+                id: emp.id,
+                name: emp.name,
+                nip: emp.nip,
+                rank: emp.rank,
+                position: emp.position,
+                position_date: emp.positionDate ? emp.positionDate.toISOString().split('T')[0] : null,
+                unit: emp.unit,
+                is_active: emp.isActive,
+            },
             status: checkIn ? 'present' : 'absent',
-            checked_in_at: checkIn?.checked_in_at,
-            photo_url: checkIn?.photo_url,
-            latitude: checkIn?.latitude,
-            longitude: checkIn?.longitude,
+            checked_in_at: checkIn?.checkedInAt ? checkIn.checkedInAt.toISOString() : undefined,
+            photo_url: checkIn?.photoUrl,
+            latitude: checkIn?.latitude ? Number(checkIn.latitude) : null,
+            longitude: checkIn?.longitude ? Number(checkIn.longitude) : null,
             flags: flags.length > 0 ? flags : undefined,
             meta: checkIn ? {
-                ip_address: checkIn.ip_address,
-                device_id: checkIn.device_id
-            } : undefined
+                ip_address: checkIn.ipAddress,
+                device_id: checkIn.deviceId,
+            } : undefined,
         }
     })
 

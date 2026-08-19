@@ -1,36 +1,33 @@
-import { createClient } from '@/utils/supabase/server'
+import { getCurrentUser, SESSION_COOKIE_NAME } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
 import QRPanel from '@/components/QRPanel'
 
 export default async function DashboardPage() {
-    const supabase = await createClient()
-
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getCurrentUser()
 
     if (!user) {
         redirect('/login')
     }
 
-    // Get stats
-    const { data: employees } = await supabase
-        .from('employees')
-        .select('*', { count: 'exact' })
-        .eq('is_active', true)
+    // Get stats from PostgreSQL
+    const employeeCount = await prisma.employee.count({
+        where: { isActive: true },
+    })
 
-    const { data: activeSessions } = await supabase
-        .from('sessions')
-        .select('*')
-        .eq('status', 'open')
+    const activeSessions = await prisma.session.findMany({
+        where: { status: 'open' },
+        orderBy: { sessionDate: 'desc' },
+    })
 
     const activeSession = activeSessions?.[0]
 
     const signOut = async () => {
         'use server'
-        const supabase = await createClient()
-        await supabase.auth.signOut()
+        const cookieStore = await cookies()
+        cookieStore.set(SESSION_COOKIE_NAME, '', { maxAge: 0, path: '/' })
         redirect('/login')
     }
 
@@ -45,13 +42,13 @@ export default async function DashboardPage() {
                             </h1>
                         </div>
                         <div className="flex items-center gap-4">
-                            <span className="text-sm text-gray-600 dark:text-gray-400">
-                                {user.email}
+                            <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                                {user.name} ({user.email})
                             </span>
                             <form action={signOut}>
                                 <button
                                     type="submit"
-                                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
+                                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 cursor-pointer"
                                 >
                                     Keluar
                                 </button>
@@ -67,15 +64,14 @@ export default async function DashboardPage() {
                         Dashboard Admin
                     </h2>
                     <p className="text-gray-600 dark:text-gray-400">
-                        Kelola sistem absensi apel pagi
+                        Kelola sistem absensi apel pagi Kantor SAR
                     </p>
                 </div>
-
 
                 {/* Active Session Alert */}
                 {activeSession ? (
                     <div className="mb-8">
-                        <QRPanel sessionId={activeSession.id} sessionName={activeSession.session_name} />
+                        <QRPanel sessionId={activeSession.id} sessionName={activeSession.sessionName} />
                     </div>
                 ) : null}
 
@@ -90,10 +86,10 @@ export default async function DashboardPage() {
                             </div>
                         </div>
                         <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                            {employees?.length || 0}
+                            {employeeCount}
                         </h3>
                         <p className="text-gray-600 dark:text-gray-400 text-sm">
-                            Total Karyawan
+                            Total Karyawan Aktif
                         </p>
                     </div>
 

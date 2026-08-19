@@ -1,15 +1,10 @@
-import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { getCurrentUser } from '@/lib/auth'
 
-// POST: Mass update employees
 export async function POST(request: Request) {
     try {
-        const supabase = await createClient()
-
-        const {
-            data: { user },
-        } = await supabase.auth.getUser()
-
+        const user = await getCurrentUser()
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
@@ -24,23 +19,26 @@ export async function POST(request: Request) {
             )
         }
 
-        // Update all selected employees
-        const { data, error } = await supabase
-            .from('employees')
-            .update(updates)
-            .in('id', employeeIds)
-            .select()
+        const prismaUpdates: any = {}
+        if (updates.unit !== undefined) prismaUpdates.unit = updates.unit
+        if (updates.is_active !== undefined) prismaUpdates.isActive = updates.is_active
+        if (updates.isActive !== undefined) prismaUpdates.isActive = updates.isActive
+        if (updates.rank !== undefined) prismaUpdates.rank = updates.rank
+        if (updates.position !== undefined) prismaUpdates.position = updates.position
 
-        if (error) {
-            return NextResponse.json({ error: error.message }, { status: 500 })
-        }
+        const result = await prisma.employee.updateMany({
+            where: {
+                id: { in: employeeIds },
+            },
+            data: prismaUpdates,
+        })
 
         return NextResponse.json({
             success: true,
-            count: data?.length || 0,
-            employees: data,
+            count: result.count,
         })
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        console.error('Mass update employees error:', error)
+        return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
     }
 }

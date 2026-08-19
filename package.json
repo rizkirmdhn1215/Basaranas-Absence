@@ -8,12 +8,17 @@
     "start": "next start",
     "lint": "eslint"
   },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "dependencies": {
-    "@supabase/ssr": "^0.8.0",
-    "@supabase/supabase-js": "^2.90.1",
+    "@aws-sdk/client-s3": "^3.1113.0",
+    "@prisma/client": "^6.19.3",
     "@tanstack/react-table": "^8.21.3",
+    "bcryptjs": "^3.0.3",
     "date-fns": "^4.1.0",
     "exceljs": "^4.4.0",
+    "jose": "^6.2.9",
     "next": "16.1.1",
     "qrcode.react": "^4.2.0",
     "react": "19.2.3",
@@ -24,11 +29,13 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
+    "prisma": "^6.19.3",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

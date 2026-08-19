@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  name         String
+  role         String    @default("admin")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  sessions     Session[]
+
+  @@map("users")
+}
+
+model Employee {
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String    @unique
+  nip          String?
+  rank         String?
+  position     String?
+  positionDate DateTime? @map("position_date") @db.Date
+  unit         String?
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  checkIns     CheckIn[]
+
+  @@index([name])
+  @@index([unit])
+  @@index([isActive])
+  @@index([nip])
+  @@map("employees")
+}
+
+model Session {
+  id          String    @id @default(uuid()) @db.Uuid
+  sessionDate DateTime  @map("session_date") @db.Date
+  sessionName String    @map("session_name")
+  startTime   String    @map("start_time")
+  endTime     String    @map("end_time")
+  status      String    @default("open") // 'open' | 'closed'
+  openedAt    DateTime  @default(now()) @map("opened_at") @db.Timestamptz()
+  closedAt    DateTime? @map("closed_at") @db.Timestamptz()
+  openedById  String?   @map("opened_by") @db.Uuid
+  openedBy    User?     @relation(fields: [openedById], references: [id])
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  checkIns    CheckIn[]
+
+  @@index([sessionDate])
+  @@index([status])
+  @@map("sessions")
+}
+
+model CheckIn {
+  id          String    @id @default(uuid()) @db.Uuid
+  sessionId   String    @map("session_id") @db.Uuid
+  employeeId  String    @map("employee_id") @db.Uuid
+  checkedInAt DateTime  @default(now()) @map("checked_in_at") @db.Timestamptz()
+  ipAddress   String?   @map("ip_address")
+  deviceId    String?   @map("device_id")
+  photoUrl    String?   @map("photo_url")
+  latitude    Decimal?  @db.Decimal(10, 8)
+  longitude   Decimal?  @db.Decimal(11, 8)
+  session     Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, employeeId])
+  @@index([sessionId])
+  @@index([employeeId])
+  @@index([deviceId])
+  @@index([ipAddress])
+  @@map("check_ins")
+}

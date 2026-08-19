@@ -1,5 +1,23 @@
-import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { getCurrentUser } from '@/lib/auth'
+
+function formatEmployee(emp: any) {
+    return {
+        id: emp.id,
+        nip: emp.nip || '',
+        name: emp.name,
+        rank: emp.rank || '',
+        position: emp.position || '',
+        position_date: emp.positionDate ? emp.positionDate.toISOString().split('T')[0] : null,
+        positionDate: emp.positionDate ? emp.positionDate.toISOString().split('T')[0] : null,
+        unit: emp.unit || '',
+        is_active: emp.isActive,
+        isActive: emp.isActive,
+        created_at: emp.createdAt.toISOString(),
+        updated_at: emp.updatedAt.toISOString(),
+    }
+}
 
 // PUT: Update employee
 export async function PUT(
@@ -7,12 +25,7 @@ export async function PUT(
     context: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = await createClient()
-
-        const {
-            data: { user },
-        } = await supabase.auth.getUser()
-
+        const user = await getCurrentUser()
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
@@ -20,27 +33,25 @@ export async function PUT(
         const { id } = await context.params
         const body = await request.json()
 
-        const { data, error } = await supabase
-            .from('employees')
-            .update({
-                nip: body.nip?.trim() || '',
+        const updated = await prisma.employee.update({
+            where: { id },
+            data: {
+                nip: body.nip?.trim() || null,
                 name: body.name?.trim(),
-                rank: body.rank?.trim(),
-                position: body.position?.trim(),
-                unit: body.unit?.trim() || '',
-                is_active: body.is_active ?? true,
-            })
-            .eq('id', id)
-            .select()
-            .single()
+                rank: body.rank?.trim() || null,
+                position: body.position?.trim() || null,
+                unit: body.unit?.trim() || null,
+                isActive: body.is_active ?? body.isActive ?? true,
+            },
+        })
 
-        if (error) {
-            return NextResponse.json({ error: error.message }, { status: 500 })
-        }
-
-        return NextResponse.json({ success: true, employee: data })
+        return NextResponse.json({
+            success: true,
+            employee: formatEmployee(updated),
+        })
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        console.error('Update employee error:', error)
+        return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
     }
 }
 
@@ -50,39 +61,20 @@ export async function DELETE(
     context: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = await createClient()
-
-        const {
-            data: { user },
-        } = await supabase.auth.getUser()
-
+        const user = await getCurrentUser()
         if (!user) {
-            console.error('DELETE employee - Unauthorized')
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
         const { id } = await context.params
-        console.log('Deleting employee:', id, 'by user:', user.email)
 
-        const { error } = await supabase
-            .from('employees')
-            .delete()
-            .eq('id', id)
+        await prisma.employee.delete({
+            where: { id },
+        })
 
-        if (error) {
-            console.error('DELETE employee error:', error)
-            return NextResponse.json({
-                error: error.message,
-                code: error.code,
-                details: error.details,
-                hint: error.hint
-            }, { status: 500 })
-        }
-
-        console.log('Successfully deleted employee:', id)
         return NextResponse.json({ success: true })
     } catch (error: any) {
-        console.error('DELETE employee exception:', error)
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        console.error('Delete employee error:', error)
+        return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
     }
 }

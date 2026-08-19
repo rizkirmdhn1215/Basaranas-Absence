@@ -1,44 +1,50 @@
-import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { getCurrentUser } from '@/lib/auth'
+
+// Format Prisma Session to frontend structure
+function formatSession(session: any) {
+    return {
+        id: session.id,
+        session_name: session.sessionName,
+        sessionName: session.sessionName,
+        session_date: session.sessionDate.toISOString().split('T')[0],
+        sessionDate: session.sessionDate.toISOString().split('T')[0],
+        start_time: session.startTime,
+        startTime: session.startTime,
+        end_time: session.endTime,
+        endTime: session.endTime,
+        status: session.status,
+        opened_at: session.openedAt.toISOString(),
+        closed_at: session.closedAt ? session.closedAt.toISOString() : null,
+        opened_by: session.openedById,
+    }
+}
 
 // GET: Fetch all sessions or active session
 export async function GET(request: Request) {
     try {
-        const supabase = await createClient()
         const { searchParams } = new URL(request.url)
         const activeOnly = searchParams.get('active') === 'true'
 
-        let query = supabase
-            .from('sessions')
-            .select('*')
-            .order('session_date', { ascending: false })
+        const sessions = await prisma.session.findMany({
+            where: activeOnly ? { status: 'open' } : undefined,
+            orderBy: { sessionDate: 'desc' },
+        })
 
-        if (activeOnly) {
-            query = query.eq('status', 'open')
-        }
-
-        const { data, error } = await query
-
-        if (error) {
-            return NextResponse.json({ error: error.message }, { status: 500 })
-        }
-
-        return NextResponse.json({ sessions: data })
+        return NextResponse.json({
+            sessions: sessions.map(formatSession),
+        })
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        console.error('Fetch sessions error:', error)
+        return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
     }
 }
 
-// POST: Create and open a new session
+// POST: Create and open a new session (Admin only)
 export async function POST(request: Request) {
     try {
-        const supabase = await createClient()
-
-        // Check authentication
-        const {
-            data: { user },
-        } = await supabase.auth.getUser()
-
+        const user = await getCurrentUser()
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
@@ -48,57 +54,52 @@ export async function POST(request: Request) {
 
         if (!sessionName || !sessionDate || !startTime || !endTime) {
             return NextResponse.json(
-                { error: 'Missing required fields' },
+                { error: 'Semua field (nama sesi, tanggal, jam mulai, jam selesai) wajib diisi' },
                 { status: 400 }
             )
         }
 
         // Check if there's already an open session
-        const { data: existingSessions } = await supabase
-            .from('sessions')
-            .select('*')
-            .eq('status', 'open')
+        const existingOpenSession = await prisma.session.findFirst({
+            where: { status: 'open' },
+        })
 
-        if (existingSessions && existingSessions.length > 0) {
+        if (existingOpenSession) {
             return NextResponse.json(
                 { error: 'Sesi aktif sudah ada. Tutup sesi sebelumnya terlebih dahulu.' },
                 { status: 400 }
             )
         }
 
-        // Create new session
-        const { data, error } = await supabase
-            .from('sessions')
-            .insert({
-                session_name: sessionName,
-                session_date: sessionDate,
-                start_time: startTime,
-                end_time: endTime,
+        // Parse date string to Date object
+        const parsedDate = new Date(`${sessionDate}T00:00:00Z`)
+
+        // Create new session in PostgreSQL
+        const newSession = await prisma.session.create({
+            data: {
+                sessionName: sessionName.trim(),
+                sessionDate: parsedDate,
+                startTime: startTime.trim(),
+                endTime: endTime.trim(),
                 status: 'open',
-                opened_by: user.id,
-            })
-            .select()
-            .single()
+                openedById: user.id,
+            },
+        })
 
-        if (error) {
-            return NextResponse.json({ error: error.message }, { status: 500 })
-        }
-
-        return NextResponse.json({ success: true, session: data })
+        return NextResponse.json({
+            success: true,
+            session: formatSession(newSession),
+        })
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        console.error('Create session error:', error)
+        return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
     }
 }
 
-// PATCH: Close a session
+// PATCH: Close a session (Admin only)
 export async function PATCH(request: Request) {
     try {
-        const supabase = await createClient()
-
-        const {
-            data: { user },
-        } = await supabase.auth.getUser()
-
+        const user = await getCurrentUser()
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
@@ -108,27 +109,25 @@ export async function PATCH(request: Request) {
 
         if (!sessionId) {
             return NextResponse.json(
-                { error: 'Session ID required' },
+                { error: 'Session ID diperlukan' },
                 { status: 400 }
             )
         }
 
-        const { data, error } = await supabase
-            .from('sessions')
-            .update({
+        const updatedSession = await prisma.session.update({
+            where: { id: sessionId },
+            data: {
                 status: 'closed',
-                closed_at: new Date().toISOString(),
-            })
-            .eq('id', sessionId)
-            .select()
-            .single()
+                closedAt: new Date(),
+            },
+        })
 
-        if (error) {
-            return NextResponse.json({ error: error.message }, { status: 500 })
-        }
-
-        return NextResponse.json({ success: true, session: data })
+        return NextResponse.json({
+            success: true,
+            session: formatSession(updatedSession),
+        })
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        console.error('Close session error:', error)
+        return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
     }
 }

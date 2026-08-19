@@ -3,7 +3,6 @@
 export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
-import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
@@ -12,7 +11,6 @@ export default function LoginPage() {
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
     const router = useRouter()
-    const supabase = createClient()
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -20,19 +18,24 @@ export default function LoginPage() {
         setLoading(true)
 
         try {
-            const { error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
             })
 
-            if (error) {
-                setError(error.message)
+            const data = await res.json()
+
+            if (!res.ok) {
+                setError(data.error || 'Gagal masuk. Periksa email dan password Anda.')
             } else {
                 router.push('/dashboard')
                 router.refresh()
             }
-        } catch (err) {
-            setError('An unexpected error occurred')
+        } catch (err: any) {
+            setError('Terjadi kesalahan jaringan atau server')
         } finally {
             setLoading(false)
         }
@@ -47,7 +50,7 @@ export default function LoginPage() {
                             Selamat Datang
                         </h1>
                         <p className="text-gray-600 dark:text-gray-400">
-                            Masuk ke Apel Pagi
+                            Masuk ke Apel Pagi Admin
                         </p>
                     </div>
 
@@ -66,7 +69,7 @@ export default function LoginPage() {
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
                                 className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                                placeholder="nama@email.com"
+                                placeholder="admin@sarpadang.go.id"
                             />
                         </div>
 
@@ -97,7 +100,7 @@ export default function LoginPage() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl"
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl cursor-pointer"
                         >
                             {loading ? 'Memproses...' : 'Masuk'}
                         </button>
